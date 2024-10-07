@@ -1,0 +1,169 @@
+---
+title: "draft of stan"
+output: word_document
+date: "2023-10-26"
+---
+
+```{r}
+library(readxl)
+library(mi)
+library(caret)
+library(dplyr)
+
+aim3data <- read_excel("aim3dataset.xlsx")
+
+```
+
+```{r}
+aim3data <- dplyr::select(aim3data, -c(height_cm, weight_kg, transplanted, died_wl, still_listed, delisted, delisted_imp, delisted_det, delisted_trans, delisted_other, state, ecmo_listing, vent_listing, iabp_listing, inotropes_listing, vadtah_listing, dial_listing, dial_wl, multiorgan, gfr_listing, gfr_txp, renal_moderate_listing, renal_severe_listing, renal_mild_listing, PAsys_listing, PAdia_listing, PAmean_listing, PCW_listing, CO_listing, ctr_listing, initstat_old1a, initstat_old1b, initstat_old1, initstat_old2, initstat_new1, initstat_new2, initstat_new3, initstat_new4, initstat_new5, initstat_new6, initstat_inactive, laststat_old1, laststat_inactive, txp_dt, vadtah_txp, PAsys_txp, PAdia_txp, PAmean_txp, PCW_txp, CO_txp, creat_txp, pvr_listing, shk, slk, dcd, don_type_unk))
+```
+
+
+```{r}
+aim3data <- as.data.frame(aim3data)
+aim3data[] <- lapply(aim3data, function(x) {
+  if (is.numeric(x)) {
+    as.numeric(x)
+  } else {
+    as.character(x)
+  }
+})
+
+missing_data <- missing_data.frame(aim3data)
+
+```
+
+```{r}
+
+summary(missing_data)
+```
+
+
+```{r}
+imputed_data <- mi(missing_data, n.iter = 10, n.chains = 3) 
+```
+
+```{r}
+completed_data <- complete(imputed_data)
+```
+
+
+```{r}
+library(mi)
+image(missing_data)
+
+```
+
+```{r}
+reference_date <- min(datasetdf$death_dt, na.rm = TRUE)
+datasetdf$death_dt_numeric <- as.numeric(difftime(datasetdf$death_dt, reference_date, units = "days"))
+
+```
+
+
+```{r}
+datasetdf$death_dt <- NULL
+reference_date_list <- min(datasetdf$list_dt, na.rm = TRUE)
+datasetdf$list_dt_numeric <- as.numeric(difftime(datasetdf$list_dt, reference_date_list, units = "days"))
+datasetdf$list_dt <- NULL
+
+```
+
+```{r}
+problematic_columns <- c()
+
+for (colname in names(datasetdf)) {
+    temp_data <- datasetdf[colname]
+    tryCatch({
+        temp_mdf <- missing_data.frame(temp_data)
+    }, error = function(e) {
+        problematic_columns <- c(problematic_columns, colname)
+    })
+}
+
+print(problematic_columns)
+```
+
+```{r}
+mdf <- missing_data.frame(datasetdf)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+```{r}
+mdf <- missing_data.frame(datasetdf)
+
+
+
+```
+
+```{r}
+dim(aim3data)
+mdf <- missing_data.frame(aim3data)
+
+
+```
+
+```{r}
+mdf_test <- missing_data.frame(aim3data$PT_CODE)
+
+```
+
+
+```{r}
+unique(aim3data$PT_CODE)
+
+```
+
+```{r}
+aim3data$PT_CODE <- as.numeric(as.character(aim3data$PT_CODE))
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

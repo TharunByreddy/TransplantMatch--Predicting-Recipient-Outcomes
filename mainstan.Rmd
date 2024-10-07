@@ -1,0 +1,883 @@
+---
+title: "mainstan"
+output: word_document
+date: "2023-10-27"
+---
+```{r}
+library(tableone)
+library(readxl)
+library(dplyr)
+
+aim3_data <- read_excel("aim3dataset.xlsx")
+
+
+```
+
+```{r}
+aim3_data
+```
+
+```{r}
+aim3_data <- dplyr::select(aim3_data, -c(height_cm, weight_kg, transplanted, died_wl, still_listed, delisted, delisted_imp, delisted_det, delisted_trans, delisted_other, state, ecmo_listing, vent_listing, iabp_listing, inotropes_listing, vadtah_listing, dial_listing, dial_wl, multiorgan, gfr_listing, gfr_txp, renal_moderate_listing, renal_severe_listing, renal_mild_listing, PAsys_listing, PAdia_listing, PAmean_listing, PCW_listing, CO_listing, ctr_listing, initstat_old1a, initstat_old1b, initstat_old1, initstat_old2, initstat_new1, initstat_new2, initstat_new3, initstat_new4, initstat_new5, initstat_new6, initstat_inactive, laststat_old1, laststat_inactive, vadtah_txp, PAsys_txp, PAdia_txp, PAmean_txp, PCW_txp, CO_txp, creat_txp, pvr_listing, shk, slk, dcd, don_type_unk))
+```
+
+
+```{r}
+aim3_data
+```
+
+
+```{r}
+aim3_data$race <- apply(aim3_data, 1, function(row) {
+  if (row['white'] == 1) return("white")
+  if (row['black'] == 1) return("black")
+  if (row['hispanic_latino'] == 1) return("hispanic_latino")
+  if (row['asian'] == 1) return("asian")
+  if (row['other_race'] == 1) return("other_race")
+  return(NA)
+})
+
+```
+
+```{r}
+dim(aim3_data)
+```
+
+```{r}
+#aim3_data$race_code <- as.integer(factor(aim3_data$race, levels = c("white", "black", "hispanic_latino", "asian", "other_race")))
+aim3_data$asian_other_race <- ifelse(aim3_data$asian == 1 | aim3_data$other_race == 1, 1, 0)
+aim3_data$hcm_rcm <- ifelse(aim3_data$hcm == 1 | aim3_data$rcm == 1, 1, 0)
+aim3_data$valvular_or_other <- ifelse(aim3_data$valvular == 1 | aim3_data$other_etiology == 1, 1, 0)
+
+aim3_data$edu_unknown <- ifelse(aim3_data$college == 1, 1,
+                                ifelse(aim3_data$no_college == 1, 0, NA))
+
+
+
+
+```
+
+```{r}
+aim3_data$public_other_code <- as.integer(rowSums(aim3_data[, c('medicaid', 'medicare', 'other_pay', 'othergovt_ins')] == 1) > 0)
+
+```
+
+```{r}
+aim3_data$bmi_category <- cut(aim3_data$bmi,
+                              breaks = c(-Inf, 18.5, 29.9, 34.9, Inf),
+                              labels = c("underweight", "normal", "obese", "severe obese"),
+                              right = FALSE)
+
+```
+
+
+```{r}
+encode_missing_pay <- function(public_other_code, private_ins) {
+  if (!is.na(public_other_code) && public_other_code != "0") {
+    return(0)
+  } else if (private_ins == 1) {
+    return(1)
+  } else {
+    return(NA)
+  }
+}
+
+aim3_data$missing_pay <- mapply(encode_missing_pay, aim3_data$public_other_code, aim3_data$private_ins)
+
+
+
+```
+
+
+```{r}
+aim3_data
+```
+
+
+```{r}
+aim3_data$laststat_old1a_new2 <- ifelse(aim3_data$laststat_old1a == 1 | aim3_data$laststat_new2 == 1, 1, 0)
+aim3_data$laststat_old1b_new4 <- ifelse(aim3_data$laststat_old1b == 1 | aim3_data$laststat_new4 == 1, 1, 0)
+
+aim3_data$laststat_new5_6_old_2 <- apply(aim3_data, 1, function(row) {
+  if (row['laststat_new5'] == 1) {
+    return('1')
+  } else if (row['laststat_new6'] == 1) {
+    return('1')
+  } else if (row['laststat_old2'] == 1) {
+    return('1')
+  } else {
+    return(0)  
+  }
+})
+
+aim3_data$laststat_new5_6_old_2 <- as.factor(aim3_data$laststat_new5_6_old_2)
+
+
+
+```
+
+```{r}
+aim3_data$composite_binary <- ifelse(
+  is.na(aim3_data$composite_dt) | difftime(aim3_data$composite_dt, aim3_data$txp_dt, units = "days") > 365, 0, 1)
+
+```
+
+
+
+```{r}
+aim3_data
+```
+
+```{r}
+# Summary statistics
+table(aim3_data$composite_binary)
+prop.table(table(aim3_data$composite_binary))
+
+barplot(table(aim3_data$composite_binary),
+        main = "Distribution of composite_binary Variable",
+        xlab = "Composite Binary",
+        ylab = "Frequency",
+        col = c("blue", "red")) 
+
+
+```
+
+```{r}
+library(dplyr)
+aim3_data <- dplyr::select(aim3_data, -c(asian, other_race, rcm, hcm, valvular, other_etiology, medicaid, medicare, other_pay, othergovt_ins, laststat_old1a, laststat_new2, laststat_old1b, laststat_new4, laststat_new5, laststat_new6, laststat_old2, composite_dt))
+```
+
+
+```{r}
+aim3_data
+```
+
+
+```{r}
+sapply(aim3_data, function(x) sum(is.na(x)))
+```
+
+
+```{r}
+# Assuming 'aim3_data' is your dataset
+aim3_data <- dplyr::select(aim3_data, -c(TRR_ID_CODE, death_dt, lastfu_dt, gfail_dt, rem_dt))
+```
+
+```{r}
+
+```
+ 
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+# Get all column names
+all_cols <- names(aim3_data)
+
+all_cols
+```
+```{r}
+vars_to_convert <- c("edu_unknown", "missing_pay", "diabetes", "smoking", 
+                     "renal_moderate_txp", "renal_mild_txp", "prior_csurg", 
+                     "dial_posttxp", "reject_posttxp", "don_hcv", "don_inotropes", 
+                     "don_smoking", "don_cocaine", "don_htn", "don_anydowntime", 
+                     "bmi_category")
+for (var in vars_to_convert) {
+    if (var %in% names(aim3_data)) {
+        aim3_data[[var]] <- factor(aim3_data[[var]])
+    }
+}
+str(aim3_data)
+
+```
+
+
+
+```{r}
+# Specify imputation methods
+# Get all column names
+library(mice)
+all_cols <- names(aim3_data)
+
+# Initialize the methods array with the default method
+methods <- setNames(rep("", length(all_cols)), all_cols)
+methods["edu_unknown"] <- "logreg"
+methods["missing_pay"] <- "logreg"
+methods["diabetes"] <- "logreg"
+methods["smoking"] <- "logreg"
+methods["renal_moderate_txp"] <- "logreg"
+methods["renal_mild_txp"] <- "logreg"
+methods["prior_csurg"] <- "logreg"
+methods["dial_posttxp"] <- "logreg"
+methods["reject_posttxp"] <- "logreg"
+methods["don_hcv"] <- "logreg"
+methods["don_inotropes"] <- "logreg"
+methods["don_smoking"] <- "logreg"
+methods["don_cocaine"] <- "logreg"
+methods["don_htn"] <- "logreg"
+methods["don_anydowntime"] <- "logreg"
+
+
+methods["death_dt"] <- "mean" 
+methods["bmi"] <- "mean"
+methods["los_posttxp"] <- "mean"
+methods["cmv_igg_stat"] <- "mean"
+methods["bilirubin"] <- "mean"
+methods["ischemic_time"] <- "mean"
+methods["gfail_dt"] <- "mean"
+methods["pvr_txp"] <- "mean"
+methods["phm_ratio"] <- "mean"
+methods["don_ef"] <- "mean"
+
+
+
+# Run mice with specified methods
+imputed_data <- mice(aim3_data, m = 5, method = methods, seed = 123)
+
+```
+```{r}
+# Ensure all binary variables have both levels (0 and 1)
+binary_vars <- names(aim3_data)[methods == "logreg"]
+for (var in binary_vars) {
+    aim3_data[[var]] <- factor(aim3_data[[var]], levels = c(0, 1))
+}
+
+
+```
+
+```{r}
+library(mice)
+library(dplyr)
+```
+
+```{r}
+nearZeroVar(aim3_data, saveMetrics = TRUE)
+
+```
+
+
+```{r}
+# Perform multiple imputation (5 times here)
+imputed_data <- mice(aim3_data, m = 5, method = 'pmm', seed = 123)
+
+```
+
+
+```{r}
+# Correlation matrix
+correlation_matrix <- cor(aim3_data, use = "complete.obs")
+print(correlation_matrix)
+
+# VIF (requires the 'car' package)
+library(car)
+vif(lm( ~ ., data = aim3_data))
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+```{r}
+# Handling numerical missing values using Mean 
+aim3_data[] <- lapply(aim3_data, function(x) {
+  if (is.numeric(x)) {
+    x[is.na(x)] <- mean(x, na.rm = TRUE)
+  }
+  return(x)
+})
+```
+
+
+```{r}
+# Handling categorical missing values using Mode
+replace_na_with_mode <- function(x) {
+  if(is.character(x) || is.factor(x)){
+    # Convert character columns to factors
+    x <- as.factor(x)
+    
+    # Compute the mode
+    tbl <- table(x)
+    mode_val <- as.character(names(tbl)[which.max(tbl)])
+    
+    # Check if mode value is NA
+    if (!is.na(mode_val)) {
+      x[is.na(x)] <- mode_val
+    }
+  }
+  return(x)
+}
+
+aim3_data[] <- lapply(aim3_data, replace_na_with_mode)
+```
+
+
+```{r}
+colSums(is.na(aim3_data))
+```
+
+```{r}
+hist(aim3_data$CPRA, main="Histogram of CPRA", xlab="CPRA", col="blue", border="black")
+
+```
+
+
+```{r}
+aim3_data <- dplyr::select(aim3_data, -c(gfail_dt, TRR_ID_CODE,  PT_CODE, CPRA_PEAK, death_dt, laststat_new5_6_old_2))
+```
+
+```{r}
+aim3_data <- dplyr::select(aim3_data, -c(lastfu_dt))
+```
+
+```{r}
+aim3_data
+```
+
+
+
+```{r}
+# Adding 1 to avoid log of zero, then applying log transformation
+aim3_data$CPRA_log <- log(aim3_data$CPRA + 1)
+
+```
+
+
+```{r}
+hist(aim3_data$CPRA_log, main="Histogram of CPRA", xlab="CPRA", col="blue", border="black")
+aim3_data
+```
+
+
+```{r}
+library(dplyr)
+# Histograms for all numeric variables
+num_cols <- sapply(aim3_data, is.numeric)
+hist_data <- aim3_data[, num_cols]
+
+par(mfrow = c(4, 4))  # Adjust the grid dimensions based on the number of variables
+for (i in 1:ncol(hist_data)) {
+  hist(hist_data[[i]], main = colnames(hist_data)[i], xlab = "", breaks = 30)
+}
+
+
+```
+
+```{r}
+#library(dplyr)
+
+# Assuming your dataframe is called aim3_data and all donor-related variables start with 'donor'
+#newdata <- aim3_data %>% 
+  #select(-matches("^don"))
+
+# If the donor-related variables contain the word 'donor' anywhere in their names, use the following:
+#newdata <- aim3_data %>% 
+ # select(-matches("don"))
+
+```
+
+```{r}
+newdata <- aim3_data
+```
+
+
+```{r}
+# Assuming you have the 'newdata' dataframe without 'typeO' and other aliased variables.
+# Refit the model without the aliased variables
+library(car)
+model_updated <- lm(composite_binary ~ . - typeO - asian_other_race - valvular_or_other - college - don_typeO - don_cod_anoxia_other - WL_ID_CODE - DONOR_ID - age_listing - list_dt - rem_dt - list_year - no_college - edu_unknown - private_ins - missing_pay - txp_year - age_txp, data = newdata)
+
+# Check if there are still aliased coefficients
+model_aliases_updated <- alias(model_updated)$Complete
+print(model_aliases_updated)
+
+# If no aliased variables are found, calculate VIF
+if(is.null(model_aliases_updated)) {
+  vif_results_updated <- vif(model_updated)
+  print(vif_results_updated)
+}
+
+```
+
+```{r}
+high_vif <- names(vif_results_updated[vif_results_updated > 5])  # Replace 5 with your chosen threshold
+
+# Print variables with high VIF
+print(high_vif)
+```
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+```{r}
+
+
+```
+
+```{r}
+
+
+```
+
+```{r}
+# Selecting only numeric columns for correlation
+numeric_data <- aim3_data[sapply(aim3_data, is.numeric)]
+
+# Calculate the correlation matrix for numeric data
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+
+# Visualize the correlation matrix
+if (!require(corrplot)) {
+  install.packages("corrplot")
+}
+library(corrplot)
+corrplot(cor_matrix, method = "color")
+
+# Assuming cor_matrix is the correlation matrix computed from numeric data
+threshold <- 0.5 # Set the threshold for visualization
+cor_matrix[abs(cor_matrix) < threshold] <- NA # Set correlations below threshold to NA
+
+# Use corrplot package for visualization
+library(corrplot)
+corrplot(cor_matrix, method = "color", order = "hclust", addrect = 5)
+
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+set.seed(123)
+index <- createDataPartition(newdata$composite_binary, p = 0.8, list = FALSE)
+trainData <- newdata[index, ]
+testData <- newdata[-index, ]
+```
+
+```{r}
+library(caret)
+
+# Convert 'composite_binary' to a factor if it's not already
+trainData$composite_binary <- as.factor(trainData$composite_binary)
+
+# Check class distribution before resampling
+table(trainData$composite_binary)
+
+# Oversample the minority class
+up_trainData <- upSample(x = trainData[, -which(names(trainData) == "composite_binary")],
+                         y = trainData$composite_binary)
+
+# Now, up_trainData is a list with $x and $y
+# Combine them back into a data frame
+up_trainData <- data.frame(composite_binary = up_trainData$y, up_trainData$x)
+
+# Check class distribution after oversampling
+table(up_trainData$composite_binary)
+
+# Undersample the majority class
+down_trainData <- downSample(x = trainData[, -which(names(trainData) == "composite_binary")],
+                             y = trainData$composite_binary)
+
+# Combine them back into a data frame
+down_trainData <- data.frame(composite_binary = down_trainData$y, down_trainData$x)
+
+# Check class distribution after undersampling
+table(down_trainData$composite_binary)
+
+
+```
+```{r}
+library(caret)
+
+# Re-check that 'composite_binary' is a factor
+print(is.factor(trainData$composite_binary))
+print(summary(trainData$composite_binary))
+
+# If 'composite_binary' is not a factor, force conversion again
+trainData$composite_binary <- factor(trainData$composite_binary)
+
+# Perform the upsampling
+up_trainData <- upSample(x = trainData[, -which(names(trainData) == "composite_binary")],
+                         y = trainData$composite_binary)
+
+# Check the structure of the resulting up_trainData
+str(up_trainData)
+
+# If up_trainData has $x and $y components, combine them into a data frame
+if (is.list(up_trainData) && "x" %in% names(up_trainData) && "y" %in% names(up_trainData)) {
+  up_trainData <- data.frame(composite_binary = up_trainData$y, up_trainData$x)
+  # Check the class distribution again
+  print(table(up_trainData$composite_binary))
+}
+
+# Perform the downsampling
+down_trainData <- downSample(x = trainData[, -which(names(trainData) == "composite_binary")],
+                             y = trainData$composite_binary)
+
+# Check the structure of the resulting down_trainData
+str(down_trainData)
+
+# If down_trainData has $x and $y components, combine them into a data frame
+if (is.list(down_trainData) && "x" %in% names(down_trainData) && "y" %in% names(down_trainData)) {
+  down_trainData <- data.frame(composite_binary = down_trainData$y, down_trainData$x)
+  # Check the class distribution again
+  print(table(down_trainData$composite_binary))
+}
+
+```
+```{r}
+# Directly print the table of class distributions for down_trainData
+print(table(down_trainData$Class))
+down_trainData
+```
+```{r}
+library(caret)
+
+# Make sure the outcome variable is a factor if it's not already
+#down_trainData$composite_binary <- factor(down_trainData$composite_binary)
+
+# Split the data into predictor variables and the outcome variable
+x_vars <- down_trainData[, !(names(down_trainData) %in% c("composite_binary", "Class"))]
+y_var <- down_trainData$composite_binary
+
+# Fit the logistic regression model
+logistic_model <- glm(Class ~ ., data = down_trainData, family = binomial())
+
+# Summary of the model
+summary(logistic_model)
+
+```
+```{r}
+# Predict the probabilities on the down sampled data
+predictions_prob <- predict(logistic_model, newdata = down_trainData, type = "response")
+
+# Convert probabilities to a binary outcome based on a threshold (usually 0.5 for binary classification)
+predictions <- ifelse(predictions_prob > 0.5, "1", "0")
+
+# Convert predictions to a factor with levels as in the actual data
+predictions_factor <- factor(predictions, levels = levels(down_trainData$Class))
+
+# Use the confusionMatrix function from the caret package
+conf_matrix <- confusionMatrix(predictions_factor, down_trainData$Class)
+
+# Print the confusion matrix
+print(conf_matrix)
+
+```
+
+
+```{r}
+# Data Splitting
+library(caret)
+set.seed(123) 
+index <- createDataPartition(aim3_data$composite_binary, p = 0.8, list = FALSE)
+trainData <- aim3_data[index, ]
+testData <- aim3_data[-index, ]
+
+```
+
+```{r}
+trainData
+```
+
+
+```{r}
+# Fit the initial model with all predictors
+#fullModel <- glm(composite_binary ~ ., data = trainData, family = "binomial")
+
+# Apply stepwise selection
+#stepModel <- step(fullModel, direction = "both", trace = 0)
+
+# The stepModel object will now contain the model after stepwise selection.
+
+```
+
+
+```{r}
+
+library(caret)
+library(xgboost)
+library(rpart)
+
+
+
+
+```
+
+```{r}
+
+```
+
+
+#Lasso
+```{r}
+
+library(glmnet)
+
+# Prepare the matrix for glmnet
+x_train <- model.matrix(composite_binary ~ ., data = trainData)[, -1] # Exclude intercept
+y_train <- trainData$composite_binary
+
+# Fit the glmnet model with lasso (alpha = 1)
+cv_fit <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+# Select the best lambda based on cross-validation
+best_lambda <- cv_fit$lambda.min
+
+# Fit the model with the best lambda
+lasso_model <- glmnet(x_train, y_train, family = "binomial", alpha = 1, lambda = best_lambda)
+
+# Prepare the test data
+x_test <- model.matrix(composite_binary ~ ., data = testData)[, -1] # Exclude intercept
+
+# Predict on test data
+lasso_pred <- predict(lasso_model, newx = x_test, s = best_lambda, type = "response")
+lasso_pred_class <- ifelse(lasso_pred > 0.5, 1, 0)
+
+# Evaluate the model
+lassoConfMatrix <- confusionMatrix(factor(lasso_pred_class), factor(testData$composite_binary))
+print(lassoConfMatrix)
+
+```
+```{r}
+best_lambda
+```
+
+```{r}
+
+```
+
+
+
+
+```{r}
+threshold <- 0.1
+# Select only numeric columns for correlation analysis
+numericData <- trainData[sapply(trainData, is.numeric)]
+
+# Calculate the correlation matrix with the numeric predictor variables
+correlationMatrix <- cor(numericData[, -which(names(numericData) == "composite_binary")], use = "complete.obs")
+
+# Calculate the correlation with the response variable
+responseCorrelation <- cor(numericData$composite_binary, numericData[, -which(names(numericData) == "composite_binary")], use = "complete.obs")
+
+# Remove features with a very low correlation
+selectedFeatures <- names(trainData)[which(abs(responseCorrelation) > threshold)]
+
+
+
+
+```
+
+
+```{r}
+# Print the selected features
+print(selectedFeatures)
+selectedFeatures
+```
+
+```{r}
+
+# Logistic Regression
+logitModel <- glm(composite_binary ~ ., data = trainData, family = "binomial")
+
+# Predict on test data
+logitPred <- predict(logitModel, newdata = testData, type = "response")
+logitPredClass <- ifelse(logitPred > 0.5, 1, 0)
+logitConfMatrix <- confusionMatrix(factor(logitPredClass), factor(testData$composite_binary))
+
+print(logitConfMatrix)
+```
+
+
+```{r}
+# Assuming you have the caret package loaded for confusionMatrix
+library(caret)
+
+# Get metrics from LASSO model
+lasso_accuracy <- lassoConfMatrix$overall['Accuracy']
+lasso_sensitivity <- lassoConfMatrix$byClass['Sensitivity']
+lasso_specificity <- lassoConfMatrix$byClass['Specificity']
+lasso_AUC <- lassoConfMatrix$overall['ROC']
+
+# Get metrics from Logistic Regression model
+logit_accuracy <- logitConfMatrix$overall['Accuracy']
+logit_sensitivity <- logitConfMatrix$byClass['Sensitivity']
+logit_specificity <- logitConfMatrix$byClass['Specificity']
+logit_AUC <- logitConfMatrix$overall['ROC']
+
+# Create a data frame to compare metrics
+comparison <- data.frame(
+  Model = c("LASSO", "Logistic Regression"),
+  Accuracy = c(lasso_accuracy, logit_accuracy)
+)
+
+# Print the comparison table
+print(comparison)
+
+
+```
+
+```{r}
+# Assuming lassoConfMatrix and logitConfMatrix are available from the previous steps
+
+# Extract accuracy from confusion matrices
+lasso_accuracy <- lassoConfMatrix$overall['Accuracy']
+logit_accuracy <- logitConfMatrix$overall['Accuracy']
+
+# Combine the accuracies into a data frame
+accuracies <- data.frame(
+  Model = c("LASSO", "Logistic"),
+  Accuracy = c(lasso_accuracy, logit_accuracy)
+)
+
+# Plot the accuracies using barplot
+barplot(accuracies$Accuracy, names.arg = accuracies$Model, xlab = "Model", ylab = "Accuracy",
+        main = "Comparison of Model Accuracies", col = c("blue", "red"), ylim = c(0, 1))
+
+# Optionally, add the accuracy values on top of the bars
+text(c(1, 2), accuracies$Accuracy, labels = round(accuracies$Accuracy, 4), pos = 3, cex = 0.8, col = "black")
+
+```
+
+```{r}
+library(randomForest)
+# Convert the response variable to a factor for classification
+trainData$composite_binary <- as.factor(trainData$composite_binary)
+
+rf_model <- randomForest(composite_binary ~ ., data = trainData)
+
+print(rf_model)
+```
+
+
+```{r}
+# Predict on test data
+rf_predictions <- predict(rf_model, newdata = testData)
+
+# Assuming it's a classification problem, you might want to compare these predictions to the actual values
+# If it's a binary classification, convert probabilities to class labels (if needed)
+
+# Evaluate model performance
+# For classification, you can use a confusion matrix
+# Load the caret package
+library(caret)
+
+# Create a confusion matrix
+confusionMatrix <- confusionMatrix(as.factor(rf_predictions), as.factor(testData$composite_binary))
+print(confusionMatrix)
+
+
+
+# For a regression problem, you might use Mean Squared Error or another appropriate metric
+# mse <- mean((testData$targetVariable - rf_predictions)^2)
+# print(mse)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+```{r}
+
+
+
+
+```
+
+
+```{r}
+# Check for missing values
+missing_data <- sapply(aim3_data, function(x) sum(is.na(x)))
+
+# Get summary statistics for numerical columns
+data_summary <- summary(aim3_data)
+
+# Check balance of the target variable (assuming the target variable is named "Survived" or similar)
+target_balance <- table(aim3_data$composite_binary)
+
+list(missing_data = missing_data, data_summary = data_summary, target_balance = target_balance)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+

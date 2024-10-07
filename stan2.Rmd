@@ -1,0 +1,229 @@
+---
+title: "stanford project"
+output: word_document
+date: "2023-10-20"
+---
+## R Markdown
+
+```{r}
+library(tableone)
+library(readxl)
+
+aim3_data <- read_excel("aim3dataset.xlsx")
+
+head(aim3_data)
+summary(aim3_data)
+str(aim3_data)
+aim3_data
+```
+
+
+```{r}
+colnames(aim3_data)
+```
+
+```{r}
+dim(aim3_data)
+```
+
+
+```{r}
+sapply(aim3_data, function(x) sum(is.na(x)))
+
+```
+```{r}
+# Handling numerical missing values using Mean 
+aim3_data[] <- lapply(aim3_data, function(x) {
+  if (is.numeric(x)) {
+    x[is.na(x)] <- mean(x, na.rm = TRUE)
+  }
+  return(x)
+})
+
+```
+
+```{r}
+sapply(aim3_data, function(x) sum(is.na(x)))
+aim3_data
+```
+```{r}
+# Handling categorical missing values using Mode
+replace_na_with_mode <- function(x) {
+  if(is.character(x) || is.factor(x)){
+    # Convert character columns to factors
+    x <- as.factor(x)
+    
+    # Compute the mode
+    tbl <- table(x)
+    mode_val <- as.character(names(tbl)[which.max(tbl)])
+    
+    # Check if mode value is NA
+    if (!is.na(mode_val)) {
+      x[is.na(x)] <- mode_val
+    }
+  }
+  return(x)
+}
+
+aim3_data[] <- lapply(aim3_data, replace_na_with_mode)
+
+```
+
+```{r}
+colSums(is.na(aim3_data))
+```
+
+
+```{r}
+library(dplyr)
+aim3_data <- select(aim3_data, -c(death_dt, delisted_imp, delisted_det, delisted_trans, delisted_other, gfail_dt, composite_dt))
+
+```
+```{r}
+aim3_data
+colSums(is.na(aim3_data))
+```
+
+
+```{r}
+aim3_data$Age<-case_when(aim3_data$AGE_DON<35 ~ "<35",
+                         aim3_data$AGE_DON>=35&aim3_data$AGE_DON<50 ~ "35-49",
+                         aim3_data$AGE_DON>=50 ~ "50+")
+aim3_data$Age<-factor(aim3_data$Age,levels=c("<35","35-49","50+"))
+
+aim3_data$Smoking<-case_when(aim3_data$don_smoking%in%c("1") ~ "Yes",
+                             aim3_data$don_smoking%in%c("0") ~ "No")
+aim3_data$Smoking<-as.factor(aim3_data$Smoking)
+
+aim3_data$Diabetes<-case_when(aim3_data$diabetes%in%c("1") ~ "Yes",
+                             aim3_data$diabetes%in%c("0") ~ "No")
+
+aim3_data$Diabetes<-as.factor(aim3_data$Diabetes)
+
+aim3_data$Sex<-case_when(aim3_data$female%in%c("1") ~ "Female",
+                              aim3_data$female%in%c("0") ~ "Male")
+
+aim3_data$COD_ID<-case_when(aim3_data$don_cod_anoxia_other%in%c("1") ~ "Anoxia and other",
+                         aim3_data$don_cod_cva%in%c("1") ~ "Cerebrovascular/Stroke",
+                         aim3_data$don_cod_trauma%in%c("1") ~ "Head Trauma")
+aim3_data$COD_ID<-factor(aim3_data$COD_ID,levels = c("Anoxia and other","Cerebrovascular/Stroke","Head Trauma"),labels = c("Anoxia and other","Cerebrovascular/Stroke","Head Trauma"))
+
+
+aim3_data$ABO<-case_when(aim3_data$typeA%in%c("1") ~ "A",
+                            aim3_data$typeB%in%c("1") ~ "B",
+                            aim3_data$typeAB%in%c("1") ~ "AB",
+                         aim3_data$typeO%in%c("1") ~ "O")
+aim3_data$ABO<-factor(aim3_data$ABO,levels=c("A","B","AB","O"),labels = c("O","A","B","AB"))
+
+aim3_data$Hypertension<-case_when(aim3_data$don_htn%in%c("1") ~ "Yes",
+                                  aim3_data$don_htn%in%c("0") ~ "No")
+aim3_data$Hypertension<-as.factor(aim3_data$Hypertension)
+
+aim3_data$Cardiac_downtime<-case_when(aim3_data$don_anydowntime%in%c("0") ~ "No",
+                                 aim3_data$don_anydowntime%in%c("1") ~ "Yes")
+aim3_data$Cardiac_downtime<-as.factor(aim3_data$Cardiac_downtime)
+
+aim3_data$PHS_risk_factor<-case_when(aim3_data$don_phs_risk%in%c("1") ~ "Yes",
+                                     aim3_data$don_phs_risk%in%c("0") ~ "No")
+aim3_data$PHS_risk_factor<-as.factor(aim3_data$PHS_risk_factor)
+
+aim3_data$Cocaine_use<-case_when(aim3_data$don_cocaine%in%c("1") ~ "Yes",
+                                 aim3_data$don_cocaine%in%c("0") ~ "No")
+aim3_data$Cocaine_use<-as.factor(aim3_data$Cocaine_use)
+
+
+aim3_data$HCV_status<-case_when(aim3_data$don_hcv%in%c("1") ~ "Yes",
+                                 aim3_data$don_hcv%in%c("0") ~ "No")
+aim3_data$HCV_status<-as.factor(aim3_data$HCV_status)
+
+
+aim3_data$EF<-case_when(aim3_data$don_ef<40 ~ "<40",
+                             aim3_data$don_ef>=40&aim3_data$don_ef<50 ~ "40~50",
+                             aim3_data$don_ef>=50 ~ "≥50")
+aim3_data$EF<-factor(aim3_data$EF,levels=c("≥50","40~50","<40"))
+aim3_data$EF<-as.factor(aim3_data$EF)
+
+
+aim3_data$INOPRESSORS<-case_when(aim3_data$don_inotropes%in%c("1") ~ "Yes",
+                                 aim3_data$don_inotropes%in%c("0") ~ "No")
+aim3_data$INOPRESSORS<-as.factor(aim3_data$INOPRESSORS)
+
+aim3_data
+
+```
+```{r}
+colSums(is.na(aim3_data))
+```
+
+```{r}
+aim3_data <- select(aim3_data, -c(don_cod_anoxia_other, female, AGE_DON, typeA, typeB, typeAB, diabetes, don_smoking, don_htn, don_hcv, don_cod_trauma, don_inotropes, don_cocaine, don_phs_risk, don_anydowntime, don_ef))
+```
+
+```{r}
+aim3_data
+```
+
+
+
+```{r}
+# Handling numerical missing values using Mean 
+aim3_data[] <- lapply(aim3_data, function(x) {
+  if (is.numeric(x)) {
+    x[is.na(x)] <- mean(x, na.rm = TRUE)
+  }
+  return(x)
+})
+```
+
+```{r}
+# Handling categorical missing values using Mode
+replace_na_with_mode <- function(x) {
+  if(is.character(x) || is.factor(x)){
+    # Convert character columns to factors
+    x <- as.factor(x)
+    
+    # Compute the mode
+    tbl <- table(x)
+    mode_val <- as.character(names(tbl)[which.max(tbl)])
+    
+    # Check if mode value is NA
+    if (!is.na(mode_val)) {
+      x[is.na(x)] <- mode_val
+    }
+  }
+  return(x)
+}
+
+aim3_data[] <- lapply(aim3_data, replace_na_with_mode)
+```
+
+```{r}
+colSums(is.na(aim3_data))
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+
+
