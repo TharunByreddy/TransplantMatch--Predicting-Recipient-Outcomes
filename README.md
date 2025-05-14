@@ -65,5 +65,9 @@ Models Used:
    git clone https://github.com/TharunByreddy/TransplantMatch--Predicting-Recipient-Outcomes.git
    cd TransplantMatch--Predicting-Recipient-Outcomes
 
+You can explore the full modeling report and results below:
+
+📄 [View Full Report](mainstan.html)
+
 📄 [View Full Report](mainstan1.html)
 
