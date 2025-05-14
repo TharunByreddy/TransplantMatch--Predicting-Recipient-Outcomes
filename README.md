@@ -63,7 +63,7 @@ Models Used:
 1. **Clone the repo**
    ```bash
    git clone https://github.com/TharunByreddy/TransplantMatch--Predicting-Recipient-Outcomes.git
-   cd TransplantMatch--Predicting-Recipient-Outcomes
+   cd TransplantMatch--Predicting-Recipient-Outcomes```
 
 You can explore the full modeling report and results below:
 
