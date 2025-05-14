@@ -56,3 +56,12 @@ Models Used:
 ├── stan2.Rmd / stan3.Rmd        # Additional/alternate versions
 ├── Recipient Heart Transplant Presentation.pptx   # Project summary slides
 ├── README.md                    # Project documentation
+
+
+## 🚀 Getting Started
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/TharunByreddy/TransplantMatch--Predicting-Recipient-Outcomes.git
+   cd TransplantMatch--Predicting-Recipient-Outcomes
+
