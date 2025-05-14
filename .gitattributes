@@ -1,2 +1,28 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.Ruserdata
+
+# RStudio files
+.Rproj.user/
+
+# Markdown/Notebook backup
+*.utf8.md
+*.knit.md
+
+# Cache and logs
+*.log
+*.out
+*.aux
+*.toc
+*.gz
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# HTML output
+*.html
