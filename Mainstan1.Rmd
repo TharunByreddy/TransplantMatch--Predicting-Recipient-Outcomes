@@ -1,0 +1,214 @@
+---
+title: "Heart Transplant Outcome Prediction"
+author: "Tharun Kumar Reddy Byreddy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+---
+
+## 📦 Load Required Libraries
+
+```{r libraries}
+library(tidyverse)
+library(randomForest)
+library(glmnet)
+library(mice)
+library(ROCR)
+library(readxl)
+library(caret)
+library(stringr)
+```
+
+---
+
+## 📥 Load and Prepare Data
+
+```{r load-data}
+data <- read_excel("aim3dataset.xlsx")
+data$txp_dt <- as.Date(data$txp_dt)
+data$composite_dt <- as.Date(data$composite_dt)
+
+data$outcome <- ifelse(!is.na(data$composite_dt) & 
+                       (data$composite_dt - data$txp_dt <= 365) & 
+                       (data$composite_dt - data$txp_dt >= 0), 1, 0)
+
+table(data$outcome)
+```
+
+---
+
+## 🧼 Remove NZV + High Correlation
+
+```{r clean-data}
+data_numeric <- data %>%
+  select(where(is.numeric), where(is.factor)) %>%
+  filter(!is.na(outcome))
+
+nzv <- nearZeroVar(data_numeric)
+data_filtered <- if (length(nzv) > 0) data_numeric[, -nzv] else data_numeric
+
+cor_matrix <- cor(data_filtered %>% select(where(is.numeric)), use = "pairwise.complete.obs")
+high_cor <- findCorrelation(cor_matrix, cutoff = 0.95)
+if (length(high_cor) > 0) {
+  data_filtered <- data_filtered[, -high_cor]
+}
+```
+
+---
+
+## ✅ Safe Variable Screening for MICE (One-by-One Test)
+
+```{r safe-screen}
+safe_vars <- c()
+data_filtered <- data_filtered %>% mutate(outcome = as.integer(outcome))
+other_vars <- setdiff(names(data_filtered), "outcome")
+
+for (v in other_vars) {
+  test_data <- data_filtered[, c("outcome", v), drop = FALSE]
+  result <- tryCatch({
+    mice(test_data, maxit = 1, printFlag = FALSE)
+    TRUE
+  }, error = function(e) FALSE)
+  
+  if (result) {
+    safe_vars <- c(safe_vars, v)
+  }
+}
+
+data_safe <- data_filtered[, c("outcome", safe_vars)]
+```
+
+---
+
+## 🧪 Imputation
+
+```{r mice-imputation}
+imp <- mice(data_safe, m = 5, seed = 123)
+data_imputed <- complete(imp, 1)
+table(data_imputed$outcome)
+```
+
+---
+
+## 🔧 Feature Engineering
+
+```{r feature-engineering}
+if ("college" %in% names(data_imputed) & "no_college" %in% names(data_imputed)) {
+  data_imputed$education_group <- ifelse(data_imputed$college == 1, "College", "No_College")
+  data_imputed <- data_imputed %>% select(-college, -no_college)
+}
+```
+
+---
+
+## 🔄 Log Transform CPRA
+
+```{r log-transform}
+if ("CPRA" %in% names(data_imputed)) {
+  data_imputed$cpra_log <- log(data_imputed$CPRA + 1)
+}
+```
+
+---
+
+## ✂️ Split Train/Test
+
+```{r split}
+set.seed(123)
+index <- sample(1:nrow(data_imputed), 0.8 * nrow(data_imputed))
+train <- data_imputed[index, ]
+test <- data_imputed[-index, ]
+```
+
+---
+
+## 📈 Logistic Regression (ROCR Compatible)
+
+```{r logistic}
+log_model <- glm(outcome ~ ., data = train, family = "binomial")
+log_pred <- predict(log_model, test, type = "response")
+
+log_pred <- as.numeric(log_pred)
+test$outcome <- as.numeric(as.character(test$outcome))
+
+log_roc <- prediction(log_pred, test$outcome)
+log_auc <- performance(log_roc, "auc")@y.values[[1]]
+
+# Confusion Matrix for Logistic
+log_class <- ifelse(log_pred > 0.5, 1, 0)
+confusionMatrix(factor(log_class), factor(test$outcome))
+```
+
+---
+
+## 📉 Lasso Regression
+
+```{r lasso}
+x_train <- model.matrix(outcome ~ ., train)[, -1]
+y_train <- train$outcome
+
+cv_lasso <- cv.glmnet(x_train, y_train, alpha = 1, family = "binomial")
+lasso_model <- glmnet(x_train, y_train, alpha = 1, lambda = cv_lasso$lambda.min)
+
+x_test <- model.matrix(outcome ~ ., test)[, -1]
+lasso_pred <- predict(lasso_model, newx = x_test, type = "response")
+
+lasso_roc <- prediction(as.numeric(lasso_pred), test$outcome)
+lasso_auc <- performance(lasso_roc, "auc")@y.values[[1]]
+```
+
+---
+
+## 🌲 Random Forest
+
+```{r rf}
+rf_model <- randomForest(as.factor(outcome) ~ ., data = train, ntree = 100)
+rf_pred <- predict(rf_model, test, type = "prob")[, 2]
+rf_roc <- prediction(rf_pred, test$outcome)
+rf_auc <- performance(rf_roc, "auc")@y.values[[1]]
+
+# Variable Importance
+varImpPlot(rf_model, main = "Random Forest Variable Importance")
+```
+
+---
+
+## 📊 AUC Comparison
+
+```{r auc-compare}
+data.frame(
+  Model = c("Logistic Regression", "Lasso Regression", "Random Forest"),
+  AUC = c(log_auc, lasso_auc, rf_auc)
+)
+```
+
+---
+
+## 📈 ROC Curve Comparison
+
+```{r roc-curve}
+plot(performance(log_roc, "tpr", "fpr"), col = "blue", lwd = 2, main = "ROC Curves")
+plot(performance(lasso_roc, "tpr", "fpr"), col = "green", lwd = 2, add = TRUE)
+plot(performance(rf_roc, "tpr", "fpr"), col = "red", lwd = 2, add = TRUE)
+legend("bottomright", legend = c("Logistic", "Lasso", "Random Forest"), col = c("blue", "green", "red"), lwd = 2)
+```
+
+---
+
+## ✅ Conclusion
+
+- Final model pipeline includes all key metrics and plots
+- Variable importance + confusion matrix increase interpretability
+- Random Forest had the best AUC and most informative variable set
+
+---
+
+## 🖥️ Session Info
+
+```{r session, echo=FALSE, message=FALSE}
+sessionInfo()
+```
